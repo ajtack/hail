@@ -76,6 +76,6 @@ function emit_request_to_servant(request, emitter) {
 
 function log_request(type, header, body) {
     console.log(type);
-    console.log("H: " + header);
-    console.log("B: " + body);
+    console.log("H: " + JSON.stringify(header));
+    console.log("B: " + body.toString());
 }
