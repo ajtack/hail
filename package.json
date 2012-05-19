@@ -1,0 +1,10 @@
+{   "name" : "hail",
+    "version" : "0.0.1",
+    "description" : "A server framework for ZeroC Ice RPC clients.",
+    "repository" : "http://github.com/substack/node-buffers.git",
+    "author" : "Andres Jaan Tack <andres.jaan.tack@eesti.ee>",
+    "dependencies" : {
+        "buffers" : "~0.1.1"
+    },
+    "license" : "MIT"
+}
