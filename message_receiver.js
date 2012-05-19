@@ -59,23 +59,28 @@ var Parser = function(emitter, stream) {
                     .word32le('length')
                     .loop(function(end_parsing, message) {
                         if (message.header.magic == "IceP") {
-                            message.header.magic = message.header.magic.toString();
+                            delete message.header.magic;
                             message.header.message_type = stringified_message_type(message.header.message_type_code);
                             this.buffer('body.data', message.length - ice_message_header_length)
-                                .loop(function(end_parsing, message) {
+                                .tap(function(message) {
                                     emitter.emit(message.header.message_type, message.header, message.body.data);
-                                    begin_parsing_new_message(this);
+                                    end_parsing();
+
+                                    // Start parsing next message, with a clean binary parser.
+                                    var next_message = binary();
+                                    begin_parsing_new_message(next_message);
+                                    stream.pipe(next_message)
                                 });
                         } else {
-                            throw new Error('Ice Protocol has been ruptured.');
                             end_parsing();
+                            throw new Error('Ice Protocol has been ruptured.');
                         }
                     });
         };
 
-        var message_parser = binary();
-        begin_parsing_new_message(message_parser);
-        stream.pipe(message_parser);
+        var first_message = binary();
+        begin_parsing_new_message(first_message);
+        stream.pipe(first_message);
     } else {
         return new Parser(emitter, stream);
     }
