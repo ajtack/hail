@@ -47,9 +47,8 @@ var Parser = function(emitter, stream) {
     if (this instanceof Parser) {
         current_header = null;
 
-        var begin_parsing_new_message = function (binary_parser) {
-            binary_parser
-                    .buffer  ('header.magic', 4)
+        var parse_new_message = function (parser) {
+            parser  .buffer  ('header.magic', 4)
                     .word8le ('header.protocol_major')
                     .word8le ('header.protocol_minor')
                     .word8le ('header.encoding_major')
@@ -57,30 +56,25 @@ var Parser = function(emitter, stream) {
                     .word8le ('header.message_type_code')
                     .word8le ('header.compression')
                     .word32le('length')
-                    .loop(function(end_parsing, message) {
+                    .tap(function(message) {
                         if (message.header.magic == "IceP") {
                             delete message.header.magic;
                             message.header.message_type = stringified_message_type(message.header.message_type_code);
-                            this.buffer('body.data', message.length - ice_message_header_length)
+                            this.buffer('body', message.length - ice_message_header_length)
                                 .tap(function(message) {
-                                    emitter.emit(message.header.message_type, message.header, message.body.data);
-                                    end_parsing();
-
-                                    // Start parsing next message, with a clean binary parser.
-                                    var next_message = binary();
-                                    begin_parsing_new_message(next_message);
-                                    stream.pipe(next_message)
+                                    emitter.emit(message.header.message_type, message.header, message.body);
+                                    this.flush();
+                                    parse_new_message(this);
                                 });
                         } else {
-                            end_parsing();
                             throw new Error('Ice Protocol has been ruptured.');
                         }
                     });
         };
 
-        var first_message = binary();
-        begin_parsing_new_message(first_message);
-        stream.pipe(first_message);
+        var message_parser = binary();
+        parse_new_message(message_parser);
+        stream.pipe(message_parser);
     } else {
         return new Parser(emitter, stream);
     }
