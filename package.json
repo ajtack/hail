@@ -4,8 +4,7 @@
     "repository" : "http://github.com/substack/node-buffers.git",
     "author" : "Andres Jaan Tack <andres.jaan.tack@eesti.ee>",
     "dependencies" : {
-        "binary" : "0.3.0",
-        "buffers" : "~0.1.1"
+        "binary" : "0.3.0"
     },
     "license" : "MIT"
 }

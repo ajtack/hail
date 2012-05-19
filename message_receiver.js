@@ -1,6 +1,5 @@
 var binary       = require('binary');
 var buffer       = require('buffer');
-var buffers      = require('buffers');
 var EventEmitter = require('events').EventEmitter;
 var net          = require('net');
 var inherits     = require('util').inherits;
@@ -38,6 +37,8 @@ Receiver.prototype.listen = function(port, host, on_listening) {
 };
 
 
+const ice_message_header_length = 14;
+
 /*!
  * Applied to an emitter and a unique connection, emits indefinitely the messages received over
  * that connection.
@@ -47,7 +48,6 @@ var Parser = function(emitter, stream) {
         current_header = null;
 
         var begin_parsing_new_message = function (binary_parser) {
-            const ice_message_header_length = 14;
             binary_parser
                     .buffer  ('header.magic', 4)
                     .word8le ('header.protocol_major')
@@ -61,10 +61,8 @@ var Parser = function(emitter, stream) {
                         if (message.header.magic == "IceP") {
                             message.header.magic = message.header.magic.toString();
                             message.header.message_type = stringified_message_type(message.header.message_type_code);
-                            console.log(JSON.stringify(message.header));
                             this.buffer('body.data', message.length - ice_message_header_length)
                                 .loop(function(end_parsing, message) {
-                                    console.log(message.body.data.toString('hex'));
                                     emitter.emit(message.header.message_type, message.header, message.body.data);
                                     begin_parsing_new_message(this);
                                 });
@@ -93,3 +91,17 @@ ConnectionValidation.writeUInt8(0, 7);              // Encoding Minor version
 ConnectionValidation.writeUInt8(3, 8);              // "Connection Validation" Type
 ConnectionValidation.writeUInt8(0, 9);              // Compression type (always zero for validation)
 ConnectionValidation.writeUInt32LE(ice_message_header_length, 10);
+
+
+var stringified_message_type = function(integer) {
+    switch (integer) {
+        case 0: return 'request';
+        case 1: return 'batch request';
+        case 2: return 'reply';
+        case 3: return 'validate connection';
+        case 4: return 'close connection';
+
+        default:
+            throw new Error('Ice message type ' + integer + ' is not known!');
+    };
+};
