@@ -1,6 +1,6 @@
+var binary       = require('binary');
 var buffer       = require('buffer');
 var buffers      = require('buffers');
-var buffer       = require('buffer')
 var EventEmitter = require('events').EventEmitter;
 var net          = require('net');
 var inherits     = require('util').inherits;
@@ -38,9 +38,6 @@ Receiver.prototype.listen = function(port, host, on_listening) {
 };
 
 
-const ice_message_header_length = 14;
-
-
 /*!
  * Applied to an emitter and a unique connection, emits indefinitely the messages received over
  * that connection.
@@ -49,43 +46,40 @@ var Parser = function(emitter, stream) {
     if (this instanceof Parser) {
         current_header = null;
 
-        var buffered_data = buffers();
-        stream.on('data', function(new_data) {
-            buffered_data.push(new_data);
-            process_incoming_data(emitter, buffered_data, current_header);
-        });
+        var begin_parsing_new_message = function (binary_parser) {
+            const ice_message_header_length = 14;
+            binary_parser
+                    .buffer  ('header.magic', 4)
+                    .word8le ('header.protocol_major')
+                    .word8le ('header.protocol_minor')
+                    .word8le ('header.encoding_major')
+                    .word8le ('header.encoding_minor')
+                    .word8le ('header.message_type_code')
+                    .word8le ('header.compression')
+                    .word32le('length')
+                    .loop(function(end_parsing, message) {
+                        if (message.header.magic == "IceP") {
+                            message.header.magic = message.header.magic.toString();
+                            message.header.message_type = stringified_message_type(message.header.message_type_code);
+                            console.log(JSON.stringify(message.header));
+                            this.buffer('body.data', message.length - ice_message_header_length)
+                                .loop(function(end_parsing, message) {
+                                    console.log(message.body.data.toString('hex'));
+                                    emitter.emit(message.header.message_type, message.header, message.body.data);
+                                    begin_parsing_new_message(this);
+                                });
+                        } else {
+                            throw new Error('Ice Protocol has been ruptured.');
+                            end_parsing();
+                        }
+                    });
+        };
+
+        var message_parser = binary();
+        begin_parsing_new_message(message_parser);
+        stream.pipe(message_parser);
     } else {
         return new Parser(emitter, stream);
-    }
-}
-
-
-function process_incoming_data(emitter, buffered_data, current_header) {
-    if (current_header == null && buffered_data.length >= ice_message_header_length) {
-        if (contains_valid_header(buffered_data)) {
-            current_header = MessageHeader.parse_from(buffered_data.slice(0, ice_message_header_length));
-
-            // In case this was a zero-length message or if the entire message arrived all at once…
-            var more_data_available = (buffered_data.length > ice_message_header_length);
-            if (current_header.body_length == 0 || more_data_available)
-                process_incoming_data(emitter, buffered_data, current_header);
-        } else {
-            throw new Error('Ice Protocol has been ruptured.');
-            stream.end();
-        }
-    } else if (current_header != null && buffered_data.length >= current_header.body_length) {
-        // TODO: Compression. The situation with compression libraries kinda sucks;
-        // none of them compile.
-        //
-        var raw_body = buffered_data.slice(ice_message_header_length, current_header.body_length);
-        var remaining_data = buffered_data.slice(ice_message_header_length + current_header.body_length);
-        emitter.emit(current_header.message_type, current_header, raw_body);
-
-        // Clear and wait for a new message
-        current_header = null;
-        buffered_data = buffers([remaining_data]);
-    } else {
-        console.log("Waiting for data!");
     }
 }
 
@@ -99,50 +93,3 @@ ConnectionValidation.writeUInt8(0, 7);              // Encoding Minor version
 ConnectionValidation.writeUInt8(3, 8);              // "Connection Validation" Type
 ConnectionValidation.writeUInt8(0, 9);              // Compression type (always zero for validation)
 ConnectionValidation.writeUInt32LE(ice_message_header_length, 10);
-
-
-function contains_valid_header(data) {
-    if (data.length >= ice_message_header_length) {
-        var magic = data.toString('ascii', 0, 4);
-        return magic == 'IceP';
-    } else {
-        return false;
-    }
-};
-
-
-var stringified_message_type = function(integer) {
-    switch (integer) {
-        case 0: return 'request';
-        case 1: return 'batch request';
-        case 2: return 'reply';
-        case 3: return 'validate connection';
-        case 4: return 'close connection';
-
-        default:
-            throw new Error('Ice message type ' + integer + ' is not known!');
-    };
-};
-
-
-/*!
- * A prototypical object wrapping specifically message header information.
- */
-var MessageHeader = function()
-{
-    if (! (this instanceof MessageHeader))
-        return new MessageHeader;
-};
-
-
-MessageHeader.parse_from = function(data) {
-    if (! contains_valid_header(data)) {
-        throw new Error('Tried to parse an invalid Ice message!');
-    } else {
-        var message = new MessageHeader;
-        message.message_type = stringified_message_type(data.readUInt8(8));
-        message.compression_mode = data.readUInt8(9);
-        message.body_length = data.readUInt32LE(10);
-        return message;
-    }
-}
