@@ -1,6 +1,10 @@
-// Node: for the below to work, you need to run `jison slice.jison slice.jisonlex`
-// I cannot figure out how properly to apply the parser at runtime. Seems janky.
-//
-var parser = require("./slice").parser;
-var parsed_module = parser.parse("module Demo { interface Printer { [\"amd\"] void printString(string s); }; };");
-console.log(parsed_module.Demo.Printer);
+var fs = require('fs');
+var generate_parser = require('jison').Parser
+
+fs.readFile('slice.jison', 'utf-8', function(error, raw_grammar) {
+	var parse_slice = generate_parser(raw_grammar);
+	fs.readFile('printer.ice', 'utf-8', function(error, slice_file) {
+		var parsed_modules = parse_slice.parse(slice_file);
+		console.log(parsed_modules);
+	});
+});
