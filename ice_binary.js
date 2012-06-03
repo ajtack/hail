@@ -15,11 +15,6 @@ var ice_binary = function(buffer) {
 exports = module.exports = ice_binary;
 
 
-ice_binary.prototype.loop = function(callback) {
-    
-};
-
-
 ice_binary.prototype.ice_string = function(name) {
     string_size_name = name + '.size';
     this.ice_size(string_size_name)
