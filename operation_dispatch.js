@@ -26,6 +26,8 @@ var OperationDispatcher = function() {
                     })
                     .ice_string('operation')
                     .word8('mode')
+                    .ice_dictionary('context', function() { }, function() { })   // Unimplemented!
+                    .ice_encapsulation('params')
                     .tap(function(vars) {
                         console.log(vars);
                     });

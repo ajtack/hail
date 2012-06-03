@@ -75,3 +75,42 @@ ice_binary.prototype.ice_sequence = function(name, content) {
 
     return this;
 };
+
+
+ice_binary.prototype.ice_dictionary = function(name, parse_key_format, parse_value_format) {
+    var kv_pair_count = name + '.expected_pair_count';    // Delete this associative key later.
+    this.ice_size(kv_pair_count)
+        .tap(function(vars) {
+            var remaining_elements = vars[name]['expected_pair_count'];
+            delete vars[name]['expected_pair_count'];
+            if (remaining_elements !== null && remaining_elements >= 0) {
+                while (remaining_elements > 0) {
+                    throw new Error("Cannot parse nonempty Ice Dictionaries (not yet implemented)");
+                }
+            } else {
+                // Could not parse this dictionary!
+                this.vars[name] = null;
+            }
+        });
+
+    return this;
+};
+
+
+ice_binary.prototype.ice_encapsulation = function(name) {
+    this.into(name, function(top) {
+        this.word32le('size')
+            .word8('major')
+            .word8('minor')
+            .tap(function(encapsulation) {
+                if (encapsulation.size !== null && encapsulation.size >= 6) {
+                    this.buffer('body', encapsulation.size - 6);
+                } else {
+                    // This encapsulation is janky. Parse fail.
+                    this.vars[name].body = null;
+                }
+            });
+    });
+
+    return this;
+};
