@@ -1,35 +1,35 @@
 var EventEmitter = require('events').EventEmitter;
-var MessageReceiver = require('./messages').Receiver;
 var ice_binary = require('./ice_binary');
 var inherits     = require('util').inherits;
 
 /*!
  * Yields an event emitter which will yield the following:
- *   - 'user_operation': object_name, operation_name, unparsed_arguments
- *   - 'existence_check': object_name
+ *   - 'operation': #object{name, category}, facet, operation_name, unparsed_arguments
  */
-var OperationDispatcher = function() {
-    if (this instanceof OperationDispatcher) {
+var Parser = function(message_receiver) {
+    if (this instanceof Parser) {
         EventEmitter.call(this);
-        this.message_receiver = MessageReceiver();
+        this.message_receiver = message_receiver;
 
+        var self = this;
         this.message_receiver.on('request', function(header, body) {
             log_request('Request', header, body);
             var operation_parser = ice_binary(body)
                     .word32le ('request_id')
-                    .ice_struct('id', function() {
+                    .ice_struct('object_id', function() {
                         this.ice_string('name');
                         this.ice_string('category');
                     })
                     .ice_sequence('facet', function() {
-                        this.ice_string('id');
+                        this.ice_string('name');
                     })
                     .ice_string('operation')
                     .word8('mode')
                     .ice_dictionary('context', function() { }, function() { })   // Unimplemented!
                     .ice_encapsulation('params')
-                    .tap(function(vars) {
-                        console.log(vars);
+                    .tap(function(r) {
+                        var facet = r.facet.length > 0? r.facet[0].name.toString() : null;
+                        self.emit('operation', r.object_id, facet, r.operation.toString(), r.params);
                     });
         });
 
@@ -53,16 +53,11 @@ var OperationDispatcher = function() {
             console.log(what);
         });
     } else {
-        return new OperationDispatcher();
+        return new Parser(message_receiver);
     }
 };
-inherits(OperationDispatcher, EventEmitter);
-exports.OperationDispatcher = OperationDispatcher;
-
-
-OperationDispatcher.prototype.listen = function(port, host, on_start) {
-    this.message_receiver.listen(port, host, on_start);
-};
+inherits(Parser, EventEmitter);
+exports.Parser = Parser;
 
 
 var requests_logged = [];
@@ -70,7 +65,4 @@ function log_request(type, header, body) {
     console.log(type);
     console.log("H: " + JSON.stringify(header));
     console.log("B: " + body.toString('hex'));
-
-    requests_logged.push({'header': header, 'body': body});
-    console.log(requests_logged);
 }
