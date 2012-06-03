@@ -21,6 +21,11 @@ var OperationDispatcher = function() {
                         this.ice_string('name');
                         this.ice_string('category');
                     })
+                    .ice_sequence('facet', function() {
+                        this.ice_string('id');
+                    })
+                    .ice_string('operation')
+                    .word8('mode')
                     .tap(function(vars) {
                         console.log(vars);
                     });
