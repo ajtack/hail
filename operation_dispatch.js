@@ -65,23 +65,6 @@ OperationDispatcher.prototype.listen = function(port, host, on_start) {
 };
 
 
-function parsed_request(request) {
-    var request_id = request.readUInt32LE(0);
-    var ice_id = 0;
-}
-
-
-function emit_request_to_servant(request, emitter) {
-    var parsed_request
-    if (parsed_request = parse_request(request)) {
-        
-    } else {
-        console.error("Rejected request for badly-formed request.")
-        // TODO: Unmarshalling error? What should the server do?
-    }
-    console.log("Received " + request.toString('hex'));
-}
-
 var requests_logged = [];
 function log_request(type, header, body) {
     console.log(type);
