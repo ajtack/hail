@@ -4,7 +4,6 @@ var _ = require("underscore");
 
 var ice_binary = function(buffer) {
     if (this instanceof ice_binary) {
-        this.buffer_ = buffer;
         this.parser = binary.parse(buffer);
         _.extend(this.parser, this);     // Really? What a pain in the ass...
         return this.parser;
