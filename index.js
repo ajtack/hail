@@ -1,12 +1,12 @@
 var fs = require('fs');
 var generate_parser = require('jison').Parser
-var ice_types = require('./slice/types');
-var Servant = require('./servant').Servant;
-var adapter = require('./adapter').Adapter;
+var ice_types = require('./lib/slice/types');
+var Servant = require('./lib/servant').Servant;
+var adapter = require('./lib/adapter').Adapter;
 var _ = require('underscore');
 
 var create_object_factory = function create_object_factory(ice_filename, callback) {
-    fs.readFile('slice/grammar.jison', 'utf-8', function(error, raw_grammar) {
+    fs.readFile('lib/slice/grammar.jison', 'utf-8', function(error, raw_grammar) {
         var parse_slice = generate_parser(raw_grammar);
         parse_slice.yy = ice_types;
         fs.readFile(ice_filename, 'utf-8', function(error, slice_file) {
