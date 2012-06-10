@@ -13,7 +13,6 @@ var Parser = function(message_receiver) {
 
         var self = this;
         this.message_receiver.on('request', function(header, body) {
-            log_request('Request', header, body);
             var operation_parser = ice_binary(body)
                     .word32le ('request_id')
                     .ice_struct('object_id', function() {
@@ -28,7 +27,7 @@ var Parser = function(message_receiver) {
                     .ice_dictionary('context', function() { }, function() { })   // Unimplemented!
                     .ice_encapsulation('params')
                     .tap(function(r) {
-                        var facet = r.facet.length > 0? r.facet[0].name.toString() : null;
+                        var facet = r.facet.length > 0? r.facet[0].name : null;
                         self.emit('operation', r.object_id, facet, r.operation.toString(), r.params);
                     });
         });

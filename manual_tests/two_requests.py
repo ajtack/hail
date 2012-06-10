@@ -15,7 +15,7 @@ class callbacky:
     def ice_exception(self, e):
         print "Got " + str(e)
 
-printer = Demo.PrinterPrx.uncheckedCast(proxy, "abc")
+printer = Demo.PrinterPrx.uncheckedCast(proxy)
 printer.printString_async(callbacky(), "Blah!")
 
 import time

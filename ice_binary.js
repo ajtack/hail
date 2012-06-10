@@ -17,7 +17,10 @@ exports = module.exports = ice_binary;
 ice_binary.prototype.ice_string = function(name) {
     string_size_name = name + '.size';
     this.ice_size(string_size_name)
-        .buffer(name, string_size_name);
+        .buffer(name, string_size_name)
+        .tap(function(stuff) {
+            stuff[name] = stuff[name].toString();
+        });
     return this;
 };
 
