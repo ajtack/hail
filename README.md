@@ -14,7 +14,7 @@ To exercise current functionality, start with the following Slice file:
 	    };
 	};
 
-Start the node server with `node driver.js`. This will run an Ice server with no objects, but which will accept and validate Ice connections. To test this, run the following with ZeroC's own _blessed_ ice client library in Python.
+Start the node server with `node driver.js`. This will run an Ice server with one Ice object that will respond to the printString method. To test this, run the following with ZeroC's own _blessed_ ice client library in Python.
 
 	$ python2.6
 	Python 2.6.7 (r267:88850, Mar 13 2012, 00:08:50) 
@@ -24,26 +24,25 @@ Start the node server with `node driver.js`. This will run an Ice server with no
 	>>> Ice.loadSlice('printer.ice')
 	>>> import Demo
 	>>> proxy = ic.stringToProxy('X:tcp -h localhost -p 4001')
-	>>> printer = Demo.PrinterPrx.checkedCast(proxy)
+	>>> printer = Demo.PrinterPrx.uncheckedCast(proxy)
+	>>> printer.printString("A pack of lies!");
 
 The Node server using _hail_ will process the request header and print out the request body. You will see something like this:
 
 	$ node driver.js 
 	Started listening!
-	Request
-	H: {"message_type":"request","compression_mode":0,"body_length":54}
-	B: Xice_isA::Demo::Printer
-	Produced event request
+	X.printString("A pack of lies!");
 
-These lines show (poorly) the `H:` header and the `B:` body of the request. The `checkedCast` line we ran in the Python session is the equivalent of running `X.isA("::Demo::Printer")`, all of which we see printed here. The hex output reveals the complete Ice::Request structure.
+The Python client will also finish the request (the response is void). This demonstrates the end-to-end request-response flow currently implemented in Ice.
 
 next steps
 ----------
 
-As you see, `hail` has not gotten especially far. The next step would be hosting an Ice object and completing an `isA` call against it from Python. After that, correct parsing of arguments will allow us to run arbitrary methods on an object.
+`Hail` is not a complete implmentation of Ice. The next step would be hosting an Ice object and completing an `isA` call against it from Python (the result of checkedCast), together with the associated exception replies. Dictionary argument types are still unhandled, and until now we only support `void` and `int` return types on remote invocations.
 
-The model for method dispatch will be event emitters. The following might be the shape of server code using _hail_ to server the `Demo::Printer` object.
+The model for method dispatch, however, is done, with the shape below. This pattern, with the use of EventEmitters and response callbacks, is to be preserved.
 
-    server.on('printString', function(s) {
-    	console.log("Printing a string!")
+    servant.on('printString', function(resp, s) {
+    	console.log("Printing a string!");
+    	resp.send();
     });
