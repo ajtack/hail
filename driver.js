@@ -9,6 +9,13 @@ ice.create_object_factory('printer.ice', function(error, defs) {
         console.log("X.printString(\"" + s + "\")");
         response.send();
     })
+    printer_x.on('ice_isA', function(response, s) {
+        if (s == '::Demo::Printer') {
+            response.send(1);
+        } else {
+            response.send(0);
+        }
+    })
 });
 
 adapter.activate(function() {

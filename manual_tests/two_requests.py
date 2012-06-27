@@ -15,7 +15,7 @@ proxy = ic.stringToProxy('X:tcp -h localhost -p 4001');
 #     def ice_exception(self, e):
 #         print "Got " + str(e)
 
-printer = Demo.PrinterPrx.uncheckedCast(proxy)
+printer = Demo.PrinterPrx.checkedCast(proxy)
 printer.printString("Blah!")
 print "Finished operation 1!"
 
