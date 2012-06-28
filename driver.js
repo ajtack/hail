@@ -10,7 +10,7 @@ ice.create_object_factory('printer.ice', function(error, defs) {
         response.send();
     })
     printer_x.on('ice_isA', function(response, s) {
-        if (s == '::Demo::Printer') {
+        if (s == printer_x.obj_name) {
             response.send(1);
         } else {
             response.send(0);
