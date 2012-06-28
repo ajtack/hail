@@ -19,7 +19,5 @@ printer = Demo.PrinterPrx.checkedCast(proxy)
 printer.printString("Blah!")
 print "Finished operation 1!"
 
-import time
-time.sleep(0.1)
 printer.printString("Blah a second time!")
 print "Finished operation 2!"
