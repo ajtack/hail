@@ -14,12 +14,13 @@ var create_object_factory = function create_object_factory(ice_filename, callbac
         parse_slice.yy = ice_types;
         fs.readFile(ice_object_file, 'utf-8', function(error, ice_file) {
             if (!error) {
-                ice_definitions = parse_slice.parse(ice_file);
+                base_ice_object_definition = parse_slice.parse(ice_file)['Object'];
                 fs.readFile(ice_filename, 'utf-8', function(error, slice_file) {
                     if (! error) {
                         // TODO: Parse errors?!
                         var parsed_definitions = parse_slice.parse(slice_file);
-                        var type_hierarchy = define_with_constructors(parsed_definitions);
+                        var type_hierarchy_namespace = '';
+                        var type_hierarchy = define_with_constructors(parsed_definitions, type_hierarchy_namespace);
                         callback(error, type_hierarchy)
                     } else {
                         callback(error, undefined);
@@ -31,35 +32,26 @@ var create_object_factory = function create_object_factory(ice_filename, callbac
         });
     });
 
-    var ice_defines = function(definition) {
-        var ice_type_hierarchy = _.foldl(ice_definitions, function(module, value) {
-        return value;
-        }, {});
-        for(key in definition) {
-            ice_type_hierarchy[key] = _.extend(definition[key], ice_type_hierarchy[key]);
-        }
-        return ice_type_hierarchy;
+    var complete_operation_set = function(interface_def) {
+        _.extend(interface_def['operations'], base_ice_object_definition['operations']);
+        return interface_def;
     };
-    var define_with_constructors = function(definition) {
-        if (_.has(definition, 'operations')) {
-            definition = ice_defines(definition);
+
+    var define_with_constructors = function(local_definition, root_name) {
+        if (_.has(local_definition, 'operations')) {
+            var interface_definition = complete_operation_set(local_definition);
             return function() { 
-                var servant = new Servant(definition);
-                servant.obj_name = obj_name;
-                obj_name = null;
+                var servant = new Servant(interface_definition);
+                servant.obj_name = root_name;
                 return servant;
             };
         } else {
-            return _.foldl(definition, function(module, value, this_key) {
-                var complete_definition = {};
-                if (obj_name) {
-                    obj_name += "::" + this_key ;
-                } else {
-                    obj_name = "::" + this_key;
-                }
-                complete_definition[this_key] = define_with_constructors(value);
-                return _.extend(module, complete_definition);
-                }, {});
+            var apply_inner_definitions = function(module, inner_definitions, this_name) {
+                fully_qualified_name = root_name + "::" + this_name;
+                module[this_name] = define_with_constructors(inner_definitions, fully_qualified_name);
+                return module;
+            };
+            return _.foldl(local_definition, apply_inner_definitions, {});
         }
     };
 };
